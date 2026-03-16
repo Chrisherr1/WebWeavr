@@ -1,4 +1,4 @@
-# comp440-project
+# Node Project Template
 
 A Node.js REST API boilerplate using Express and MySQL2.
 
