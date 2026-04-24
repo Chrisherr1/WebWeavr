@@ -1,4 +1,8 @@
+// Enriches live hosts with org, location, open ports, and known CVEs.
+// Reuses data already fetched by the ipinfo and internetdb modules — only fetches
+// fresh data for IPs that weren't covered during the initial module run.
 export async function enrich(liveHosts, moduleResults) {
+  // Build lookup maps from existing module data to avoid redundant API calls
   const ipInfoMap = {};
   const ipinfoResults = (moduleResults.ipinfo && moduleResults.ipinfo.results) ? moduleResults.ipinfo.results : [];
   ipinfoResults.forEach(function (r) {
@@ -11,10 +15,12 @@ export async function enrich(liveHosts, moduleResults) {
     internetdbMap[r.ip] = r;
   });
 
+  // Find IPs from live hosts that weren't already looked up during the module phase
   const covered = new Set([...Object.keys(ipInfoMap), ...Object.keys(internetdbMap)]);
   const allIPs = liveHosts.flatMap(function (h) { return h.ips; });
   const newIPs = [...new Set(allIPs.filter(function (ip) { return !covered.has(ip); }))];
 
+  // Fetch missing IPs from both sources in parallel
   await Promise.allSettled(
     newIPs.flatMap(function (ip) {
       return [
@@ -36,6 +42,7 @@ export async function enrich(liveHosts, moduleResults) {
     })
   );
 
+  // Attach enrichment data to each live host
   return liveHosts.map(function (host) {
     return {
       subdomain: host.subdomain,

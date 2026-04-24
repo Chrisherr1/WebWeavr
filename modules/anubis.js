@@ -1,14 +1,6 @@
-// src/modules/anubis.js
-
-
-
-// Fetches subdomains from Anubis for a given domain
+// Fetches subdomains from Anubis (jonlu.ca) — a passive DNS dataset.
 export default async function anubis(domain) {
-  // Anubis API endpoint for subdomain enumeration
   const url = 'https://jonlu.ca/anubis/subdomains/' + domain;
-  // we try to fetch the data from Anubis and process it
-  
-  // if there's an error (like network issues or invalid response), we catch it and return an empty result with a note
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
     const json = await res.json();

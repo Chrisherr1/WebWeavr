@@ -1,8 +1,11 @@
+// Fetches WHOIS data via RDAP (the modern, structured replacement for plain WHOIS).
+// Uses the IANA bootstrap registry to find the correct RDAP endpoint for the TLD.
 export default async function whois(domain) {
   const tld = domain.split('.').pop().toLowerCase();
   let rdapBase = null;
 
   try {
+    // The IANA bootstrap file maps TLDs to their authoritative RDAP endpoints
     const bootstrap = await fetch('https://data.iana.org/rdap/dns.json');
     const bootstrapJson = await bootstrap.json();
     for (const [tlds, urls] of bootstrapJson.services) {
@@ -12,6 +15,7 @@ export default async function whois(domain) {
       }
     }
   } catch (err) {
+    // Fall back to Verisign's endpoint for .com/.net if bootstrap fetch fails
     rdapBase = 'https://rdap.verisign.com/com/v1/';
   }
 

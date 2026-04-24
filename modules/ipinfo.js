@@ -1,9 +1,13 @@
+// Queries IPInfo for org, location, and hostname data per IP.
+// First resolves the domain to IPs via Cloudflare DoH, then looks up each IP.
+
 async function resolveIPs(domain) {
   try {
     const res = await fetch('https://cloudflare-dns.com/dns-query?name=' + domain + '&type=A', {
       headers: { Accept: 'application/dns-json' }
     });
     const json = await res.json();
+    // type 1 = A record
     return (json.Answer || []).filter(function (r) {
       return r.type === 1;
     }).map(function (r) {

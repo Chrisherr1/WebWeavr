@@ -1,3 +1,5 @@
+// Returns scan log entries from the database.
+// Supports optional ?ip= and ?domain= query params for filtering.
 import pool from '../config/db.js';
 
 export async function getScans(req, res) {
@@ -21,6 +23,7 @@ export async function getScans(req, res) {
     query += ' WHERE ' + conditions.join(' AND ');
   }
 
+  // Most recent first, capped at 500 rows
   query += ' ORDER BY created_at DESC LIMIT 500';
 
   const [rows] = await pool.execute(query, params);

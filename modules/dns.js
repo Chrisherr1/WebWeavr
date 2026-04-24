@@ -1,3 +1,6 @@
+// Fetches DNS records using Cloudflare's DNS-over-HTTPS API.
+// All record types are queried in parallel to keep latency low.
+
 async function query(domain, type) {
   try {
     const url = 'https://cloudflare-dns.com/dns-query?name=' + domain + '&type=' + type;
@@ -20,5 +23,5 @@ export default async function dns(domain) {
     query(domain, 'NS'),
     query(domain, 'CNAME'),
   ]);
-  return { A: A, AAAA: AAAA, MX: MX, TXT: TXT, NS: NS, CNAME: CNAME };
+  return { A, AAAA, MX, TXT, NS, CNAME };
 }
