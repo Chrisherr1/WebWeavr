@@ -6,14 +6,18 @@ A passive reconnaissance tool that scans a domain across multiple OSINT sources 
 
 - **Runtime:** Node.js (ES Modules)
 - **Framework:** Express 5
-- **Security:** Helmet, CORS, rate limiting
+- **Database:** MySQL (mysql2)
+- **Validation:** Zod
+- **Security:** Helmet, CORS, rate limiting (express-rate-limit)
 - **Streaming:** Server-Sent Events (SSE)
+- **Logging:** Morgan (combined)
 
 ## Features
 
-- Runs 11 recon modules in parallel across 4 categories
+- Runs recon modules in parallel across 4 categories
 - Streams live progress updates to the client via SSE
 - Aggregates subdomains, resolves live hosts, and enriches results through a post-scan pipeline
+- Logs all scans to MySQL with queryable history
 
 ## Recon Modules
 
@@ -29,24 +33,33 @@ A passive reconnaissance tool that scans a domain across multiple OSINT sources 
 ```
 Spyder/
 ├── config/
+│   ├── db.js               # MySQL connection pool
 │   ├── modules.js          # Module registry and group definitions
-│   └── validateEnv.js      # Environment variable validation
+│   └── validateEnv.js      # Zod environment variable validation
 ├── controllers/
-│   └── reconController.js  # Request handler for scan endpoint
+│   ├── reconController.js  # SSE scan endpoint handler
+│   └── scansController.js  # Scan history query handler
 ├── middleware/
 │   └── errorHandler.js     # Global error handler
 ├── modules/                # Individual OSINT source modules
 ├── pipeline/
 │   ├── aggregate.js        # Deduplicate and collect subdomains
 │   ├── resolve.js          # DNS resolution to find live hosts
-│   └── enrich.js           # Enrich live hosts with extra data
+│   └── enrich.js           # Enrich live hosts with org, geo, and port data
 ├── routes/
-│   └── recon.js            # API route definitions
+│   ├── index.js            # Root router — mounts all route groups
+│   ├── recon.js            # /api/recon routes
+│   └── scans.js            # /api/scans routes
+├── schema/
+│   └── schema.sql          # Database schema
 ├── services/
-│   └── reconService.js     # Orchestrates modules and pipeline
+│   ├── reconService.js     # Orchestrates modules and pipeline
+│   └── scanLogger.js       # Writes scan records to MySQL
 ├── utils/
 │   ├── domain.js           # Domain validation
 │   └── sse.js              # SSE helper
+├── public/                 # Frontend (HTML, CSS, JS)
+├── app.js                  # Express app setup
 └── index.js                # Server entry point
 ```
 
@@ -58,11 +71,23 @@ npm install
 ```
 
 ### 2. Configure environment variables
-```bash
+
+Create a `.env` file in the project root:
+```
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=yourpassword
+DB_NAME=spyder_recon
+CORS_ORIGIN=http://localhost:3000
 PORT=3000
 ```
 
-### 3. Start the server
+### 3. Set up the database
+```bash
+mysql -u root -p < schema/schema.sql
+```
+
+### 4. Start the server
 ```bash
 # Development
 npm run dev
@@ -89,6 +114,12 @@ Streams scan progress as Server-Sent Events.
 | `pipeline_done` | Final enriched results |
 | `complete` | Scan finished |
 
+### `GET /api/scans`
+
+Returns scan history from the database.
+
+**Query parameters:** `ip`, `domain` (both optional, used as filters)
+
 ## Data Flow
 
 ```
@@ -101,6 +132,8 @@ GET /api/recon?domain=
   pipeline: aggregate → resolve → enrich
         ↓
   SSE stream → client
+        ↓
+  scanLogger → MySQL
 ```
 
 ## Scripts
