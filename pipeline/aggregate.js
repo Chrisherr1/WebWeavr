@@ -5,6 +5,7 @@ export function aggregate(results, domain) {
 
   // These sources return a flat subdomains array directly
   const directSources = ['crtsh', 'certspotter', 'anubis', 'urlscan'];
+
   for (const id of directSources) {
     const sourceSubdomains = (results[id] && results[id].subdomains) ? results[id].subdomains : [];
     sourceSubdomains.forEach(function (s) {
@@ -14,6 +15,7 @@ export function aggregate(results, domain) {
 
   // These sources return URL strings — extract the hostname and validate it belongs to the target domain
   const urlSources = ['wayback', 'commoncrawl'];
+  
   for (const id of urlSources) {
     const sourceUrls = (results[id] && results[id].urls) ? results[id].urls : [];
     sourceUrls.forEach(function (u) {

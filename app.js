@@ -20,10 +20,11 @@ app.set('trust proxy', 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'"],
-      styleSrc:   ["'self'"],
-      imgSrc:     ["'self'"]
+      defaultSrc:  ["'self'"],
+      scriptSrc:   ["'self'"],
+      styleSrc:    ["'self'"],
+      imgSrc:      ["'self'"],
+      connectSrc:  ["'self'"]
     }
   }
 }));
