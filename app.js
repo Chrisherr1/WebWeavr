@@ -30,14 +30,16 @@ app.use(helmet({
 }));
 
 // Enable cross-origin requests
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN
+}));
 
 // Parse incoming JSON bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // HTTP request logging
-app.use(morgan('dev'));
+app.use(morgan('combined'));
 
 // Serve static frontend files
 app.use(express.static(join(__dirname, 'public')));

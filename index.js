@@ -1,11 +1,8 @@
-// Load environment variables before anything else
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Validate required environment variables at startup
-import './config/validateEnv.js';
-
-import app from './app.js';
+await import('./config/validateEnv.js');
+const { default: app } = await import('./app.js');
 
 const PORT = process.env.PORT || 3000;
 

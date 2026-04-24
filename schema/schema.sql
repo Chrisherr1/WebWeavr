@@ -1,0 +1,11 @@
+CREATE DATABASE IF NOT EXISTS spyder_recon;
+
+USE spyder_recon;
+
+CREATE TABLE IF NOT EXISTS scans (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  ip         VARCHAR(45)  NOT NULL,
+  domain     VARCHAR(255) NOT NULL,
+  status     VARCHAR(50)  NOT NULL,
+  scanned_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

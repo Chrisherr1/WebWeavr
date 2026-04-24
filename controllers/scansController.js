@@ -3,6 +3,7 @@
 import pool from '../config/db.js';
 
 export async function getScans(req, res) {
+
   const { ip, domain } = req.query;
 
   let query = 'SELECT * FROM scans';
@@ -23,7 +24,6 @@ export async function getScans(req, res) {
     query += ' WHERE ' + conditions.join(' AND ');
   }
 
-  // Most recent first, capped at 500 rows
   query += ' ORDER BY created_at DESC LIMIT 500';
 
   const [rows] = await pool.execute(query, params);
