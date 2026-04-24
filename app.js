@@ -1,64 +1,68 @@
-// app.js - Main application file for the Express server
-
-// .env and express 
-import dotenv from 'dotenv';
-// Load environment variables from .env file and validate them at startup
-dotenv.config();
-// needs to be imported after dotenv to validate environment variables at startup
-import './config/validateEnv.js'; 
-
-
 import express from 'express';
-
-// Logs and error handling
-import morgan from 'morgan';
-import errorHandler from './middleware/errorHandler.js';
-
-// CSRF and CORS Security
 import helmet from 'helmet';
 import cors from 'cors';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import router from './routes/index.js';
+import errorHandler from './middleware/errorHandler.js';
 
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 
-// Security
-// sets secure Http headers and enforces content security policy  
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
+// Trust X-Forwarded-For header when running behind Nginx
+app.set('trust proxy', 1);
 
-            //only allows resources from same origin
-            defaultSrc: ["'self'"],
-            //only allows scripts from same origin
-            scriptSrc: ["'self'"],
-            //only allows styles from same origin
-            styleSrc: ["'self'"],
-            //only allows images from same origin
-            imgSrc: ["'self'"]
-        }
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'"],
+      styleSrc:   ["'self'"],
+      imgSrc:     ["'self'"]
     }
+  }
 }));
-// enables cross-origin resource sharing, not configured yet. Configure during Production
+
+// Enable cross-origin requests
 app.use(cors());
 
-
-// Parsing Middleware
-// parses incoming JSON and urlencoded data and makes it available in req.body
+// Parse incoming JSON bodies
 app.use(express.json());
-app.use(express.urlencoded({extended : true}));
+app.use(express.urlencoded({ extended: true }));
 
-
-// Logging Middleware
-// logs HTTP requests and errors to the console using morgan in 'dev' format, which provides concise output colored by response status for development use. 
-// It helps in monitoring and debugging HTTP requests and responses during development.
+// HTTP request logging
 app.use(morgan('dev'));
+
+// Serve static frontend files
+app.use(express.static(join(__dirname, 'public')));
+
+// Rate limiter — 5 requests per 15 minutes per IP
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+// Apply rate limiter to all API routes
+app.use('/api/', limiter);
+app.use('/api', router);
+
+// Serve the frontend on root
+app.get('/', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'index.html'));
+});
+
 // 404 handler for undefined routes
 app.use((req, res) => {
-    res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ message: 'Route not found' });
 });
-// Global error handler that captures any unhandled errors and sends a standardized JSON response with the error message and appropriate HTTP status code. 
-// It prevents the application from crashing due to unhandled errors and provides a consistent error response format for clients. 
-// This middleware should be added after all other routes and middleware to ensure it catches any unhandled errors.
+
+// Global error handler — catches any unhandled errors and returns a clean JSON response
 app.use(errorHandler);
 
+export default app;
