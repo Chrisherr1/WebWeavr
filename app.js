@@ -31,7 +31,9 @@ app.use(helmet({
 
 // Enable cross-origin requests
 app.use(cors({
-  origin: process.env.CORS_ORIGIN
+  origin:      process.env.CORS_ORIGIN,
+  methods:     ['GET'],
+  credentials: false
 }));
 
 // Parse incoming JSON bodies
