@@ -35,8 +35,8 @@ app.use(cors({
 }));
 
 // Parse incoming JSON bodies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // HTTP request logging
 app.use(morgan('combined'));
