@@ -56,7 +56,8 @@ function startScan() {
     const payload = JSON.parse(e.data);
     totalModules = payload.total;
     progressLabel.textContent = 'Scanning ' + payload.domain + '…';
-    results.innerHTML = '<p class="scan-intro">Scanning <span class="scan-domain">' + payload.domain + '</span></p>';
+    results.innerHTML = '<p class="scan-intro">Scanning <span class="scan-domain">' + payload.domain + '</span></p>'
+      + '<div id="pipeline-section" class="pipeline-section hidden"></div>';
   });
 
   evtSource.addEventListener('module_start', function (e) {
@@ -83,11 +84,9 @@ function startScan() {
   });
 
   evtSource.addEventListener('pipeline_start', function () {
-    const el = document.createElement('div');
-    el.id = 'pipeline-section';
-    el.className = 'pipeline-section';
+    const el = document.getElementById('pipeline-section');
+    el.classList.remove('hidden');
     el.innerHTML = '<div class="pipeline-header"><span class="pipeline-title">Surface Summary</span><span class="pipeline-status">Resolving…</span></div>';
-    results.appendChild(el);
     progressLabel.textContent = 'Resolving subdomains…';
   });
 
