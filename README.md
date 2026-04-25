@@ -1,4 +1,4 @@
-# Spyder
+# WebWeavr
 
 A passive reconnaissance tool that scans a domain across multiple OSINT sources and streams results in real time via Server-Sent Events (SSE).
 
@@ -31,7 +31,7 @@ A passive reconnaissance tool that scans a domain across multiple OSINT sources 
 ## Project Structure
 
 ```
-Spyder/
+WebWeavr/
 ├── config/
 │   ├── db.js               # MySQL connection pool
 │   ├── modules.js          # Module registry and group definitions

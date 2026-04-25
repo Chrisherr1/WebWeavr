@@ -3,7 +3,7 @@
 export default async function bgp(domain) {
   const url = 'https://bgp.he.net/dns/' + domain + '#_dns';
   const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Spyder/1.0; passive recon tool)' }
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WebWeavr/1.0; passive recon tool)' }
   });
   const data = await res.text();
   const asnMatches = [...data.matchAll(/AS(\d+)/g)].map(function (m) { return 'AS' + m[1]; });
