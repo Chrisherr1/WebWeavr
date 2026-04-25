@@ -56,8 +56,22 @@ function startScan() {
     const payload = JSON.parse(e.data);
     totalModules = payload.total;
     progressLabel.textContent = 'Scanning ' + payload.domain + '…';
-    results.innerHTML = '<p class="scan-intro">Scanning <span class="scan-domain">' + payload.domain + '</span></p>'
-      + '<div id="pipeline-section" class="pipeline-section hidden"></div>';
+    const intro = document.createElement('p');
+    intro.className = 'scan-intro';
+    const introLabel = document.createTextNode('Scanning ');
+    const introDomain = document.createElement('span');
+    introDomain.className = 'scan-domain';
+    introDomain.textContent = payload.domain;
+    intro.appendChild(introLabel);
+    intro.appendChild(introDomain);
+
+    const pipeline = document.createElement('div');
+    pipeline.id = 'pipeline-section';
+    pipeline.className = 'pipeline-section hidden';
+
+    results.innerHTML = '';
+    results.appendChild(intro);
+    results.appendChild(pipeline);
   });
 
   evtSource.addEventListener('module_start', function (e) {
