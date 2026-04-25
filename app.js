@@ -50,7 +50,7 @@ app.use(express.static(join(__dirname, 'public')));
 // Rate limiter — 5 requests per 15 minutes per IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 3,
   message: { error: 'Too many requests, please try again later.' }
 });
 
