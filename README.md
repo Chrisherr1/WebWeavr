@@ -75,10 +75,11 @@ npm install
 Create a `.env` file in the project root:
 ```
 DB_HOST=localhost
-DB_USER=root
+DB_USER=webweavr
 DB_PASSWORD=yourpassword
-DB_NAME=spyder_recon
-CORS_ORIGIN=http://localhost:3000
+DB_ROOT_PASSWORD=yourrootpassword
+DB_NAME=webweavr_recon
+CORS_ORIGIN=https://yourdomain.com
 PORT=3000
 ```
 

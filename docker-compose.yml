@@ -16,7 +16,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - spyder_network
+      - webweavr_network
     deploy:
       resources:
         limits:
@@ -36,7 +36,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - spyder_network
+      - webweavr_network
     deploy:
       resources:
         limits:
@@ -44,7 +44,7 @@ services:
           cpus: "1"
 
 networks:
-  spyder_network:
+  webweavr_network:
     driver: bridge
 
 volumes:

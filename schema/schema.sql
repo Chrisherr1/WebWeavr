@@ -1,6 +1,6 @@
-CREATE DATABASE IF NOT EXISTS spyder_recon;
+CREATE DATABASE IF NOT EXISTS webweavr_recon;
 
-USE spyder_recon;
+USE webweavr_recon;
 
 CREATE TABLE IF NOT EXISTS scans (
   id         INT AUTO_INCREMENT PRIMARY KEY,

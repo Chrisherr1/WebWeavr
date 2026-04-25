@@ -1,6 +1,6 @@
 FROM node:lts-alpine
 
-RUN addgroup -S spyder && adduser -S spyder -G spyder
+RUN addgroup -S webweavr && adduser -S webweavr -G webweavr
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY services ./services
 COPY utils ./utils
 COPY app.js index.js ./
 
-USER spyder
+USER webweavr
 
 EXPOSE 3000
 
