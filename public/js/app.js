@@ -50,7 +50,7 @@ function startScan() {
   btn.disabled = true;
 
   const groupsStarted = new Set();
-  const evtSource = new EventSource('/api/recon?domain=' + encodeURIComponent(domain));
+  const evtSource = new EventSource('https://api.webweavr.christianherrera.dev/api/recon?domain=' + encodeURIComponent(domain));
 
   evtSource.addEventListener('start', function (e) {
     const payload = JSON.parse(e.data);
