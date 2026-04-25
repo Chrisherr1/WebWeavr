@@ -1,3 +1,7 @@
+const API_BASE = location.hostname === 'webweavr.christianherrera.dev'
+  ? 'https://api.webweavr.christianherrera.dev'
+  : '';
+
 const input = document.getElementById('domain-input');
 const btn = document.getElementById('scan-btn');
 const progress = document.getElementById('progress');
@@ -107,7 +111,7 @@ async function startScan() {
   };
 
   try {
-    const res = await fetch('https://api.webweavr.christianherrera.dev/api/recon?domain=' + encodeURIComponent(domain));
+    const res = await fetch(API_BASE + '/api/recon?domain=' + encodeURIComponent(domain));
 
     if (res.status === 429) {
       progressLabel.textContent = 'Rate limit reached. Try again in 15 minutes.';
