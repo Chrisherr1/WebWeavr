@@ -115,12 +115,6 @@ Streams scan progress as Server-Sent Events.
 | `pipeline_done` | Final enriched results |
 | `complete` | Scan finished |
 
-### `GET /api/scans`
-
-Returns scan history from the database.
-
-**Query parameters:** `ip`, `domain` (both optional, used as filters)
-
 ## Data Flow
 
 ```
