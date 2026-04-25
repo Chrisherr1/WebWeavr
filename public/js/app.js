@@ -35,7 +35,7 @@ input.addEventListener('keydown', function (e) {
   }
 });
 
-function startScan() {
+async function startScan() {
   const domain = input.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   if (!domain) {
     return;
@@ -50,80 +50,114 @@ function startScan() {
   btn.disabled = true;
 
   const groupsStarted = new Set();
-  const evtSource = new EventSource('https://api.webweavr.christianherrera.dev/api/recon?domain=' + encodeURIComponent(domain));
+  const handlers = {
+    start: function (payload) {
+      totalModules = payload.total;
+      progressLabel.textContent = 'Scanning ' + payload.domain + '…';
+      const intro = document.createElement('p');
+      intro.className = 'scan-intro';
+      const introLabel = document.createTextNode('Scanning ');
+      const introDomain = document.createElement('span');
+      introDomain.className = 'scan-domain';
+      introDomain.textContent = payload.domain;
+      intro.appendChild(introLabel);
+      intro.appendChild(introDomain);
 
-  evtSource.addEventListener('start', function (e) {
-    const payload = JSON.parse(e.data);
-    totalModules = payload.total;
-    progressLabel.textContent = 'Scanning ' + payload.domain + '…';
-    const intro = document.createElement('p');
-    intro.className = 'scan-intro';
-    const introLabel = document.createTextNode('Scanning ');
-    const introDomain = document.createElement('span');
-    introDomain.className = 'scan-domain';
-    introDomain.textContent = payload.domain;
-    intro.appendChild(introLabel);
-    intro.appendChild(introDomain);
+      const pipeline = document.createElement('div');
+      pipeline.id = 'pipeline-section';
+      pipeline.className = 'pipeline-section hidden';
 
-    const pipeline = document.createElement('div');
-    pipeline.id = 'pipeline-section';
-    pipeline.className = 'pipeline-section hidden';
-
-    results.innerHTML = '';
-    results.appendChild(intro);
-    results.appendChild(pipeline);
-  });
-
-  evtSource.addEventListener('module_start', function (e) {
-    const payload = JSON.parse(e.data);
-    if (!groupsStarted.has(payload.group)) {
-      groupsStarted.add(payload.group);
-      appendGroupHeader(payload.group, payload.groupLabel);
+      results.innerHTML = '';
+      results.appendChild(intro);
+      results.appendChild(pipeline);
+    },
+    module_start: function (payload) {
+      if (!groupsStarted.has(payload.group)) {
+        groupsStarted.add(payload.group);
+        appendGroupHeader(payload.group, payload.groupLabel);
+      }
+      appendCard(payload.id, 'loading', null);
+    },
+    module_done: function (payload) {
+      completed++;
+      updateProgress();
+      updateCard(payload.id, 'done', payload.data);
+    },
+    module_error: function (payload) {
+      completed++;
+      updateProgress();
+      updateCard(payload.id, 'error', { error: payload.error });
+    },
+    pipeline_start: function () {
+      const el = document.getElementById('pipeline-section');
+      el.classList.remove('hidden');
+      el.innerHTML = '<div class="pipeline-header"><span class="pipeline-title">Surface Summary</span><span class="pipeline-status">Resolving…</span></div>';
+      progressLabel.textContent = 'Resolving subdomains…';
+    },
+    pipeline_done: function (payload) {
+      const el = document.getElementById('pipeline-section');
+      if (el) {
+        el.innerHTML = renderPipeline(payload.subdomains, payload.live);
+      }
+    },
+    complete: function () {
+      progressFill.style.width = '100%';
+      progressLabel.textContent = 'Scan complete.';
     }
-    appendCard(payload.id, 'loading', null);
-  });
-
-  evtSource.addEventListener('module_done', function (e) {
-    const payload = JSON.parse(e.data);
-    completed++;
-    updateProgress();
-    updateCard(payload.id, 'done', payload.data);
-  });
-
-  evtSource.addEventListener('module_error', function (e) {
-    const payload = JSON.parse(e.data);
-    completed++;
-    updateProgress();
-    updateCard(payload.id, 'error', { error: payload.error });
-  });
-
-  evtSource.addEventListener('pipeline_start', function () {
-    const el = document.getElementById('pipeline-section');
-    el.classList.remove('hidden');
-    el.innerHTML = '<div class="pipeline-header"><span class="pipeline-title">Surface Summary</span><span class="pipeline-status">Resolving…</span></div>';
-    progressLabel.textContent = 'Resolving subdomains…';
-  });
-
-  evtSource.addEventListener('pipeline_done', function (e) {
-    const payload = JSON.parse(e.data);
-    const el = document.getElementById('pipeline-section');
-    if (el) {
-      el.innerHTML = renderPipeline(payload.subdomains, payload.live);
-    }
-  });
-
-  evtSource.addEventListener('complete', function () {
-    progressFill.style.width = '100%';
-    progressLabel.textContent = 'Scan complete.';
-    btn.disabled = false;
-    evtSource.close();
-  });
-
-  evtSource.onerror = function () {
-    progressLabel.textContent = 'Connection error.';
-    btn.disabled = false;
-    evtSource.close();
   };
+
+  try {
+    const res = await fetch('https://api.webweavr.christianherrera.dev/api/recon?domain=' + encodeURIComponent(domain));
+
+    if (res.status === 429) {
+      progressLabel.textContent = 'Rate limit reached. Try again in 15 minutes.';
+      btn.disabled = false;
+      return;
+    }
+
+    if (!res.ok) {
+      progressLabel.textContent = 'Server error (' + res.status + ').';
+      btn.disabled = false;
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+
+      let boundary;
+      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        let eventName = 'message';
+        let dataLine = '';
+        block.split('\n').forEach(function (line) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLine += line.slice(5).trim();
+          }
+        });
+
+        if (handlers[eventName]) {
+          const payload = dataLine ? JSON.parse(dataLine) : null;
+          handlers[eventName](payload);
+        }
+      }
+    }
+  } catch (err) {
+    progressLabel.textContent = 'Connection error.';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function updateProgress() {
