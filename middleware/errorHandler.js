@@ -1,7 +1,5 @@
-// Global error handler — catches any unhandled errors thrown in route handlers.
-// Must be registered after all routes to intercept errors correctly.
-export default (error, request, response, next) => {
+export default function errorHandler(error, request, response, next) {
   const status = error.status || 500;
-  const message = error.message || 'Internal Server Error';
+  const message = status === 500 ? 'Internal Server Error' : error.message;
   response.status(status).json({ error: message });
-};
+}
