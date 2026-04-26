@@ -20,12 +20,12 @@ export default async function whois(domain) {
   }
 
   if (!rdapBase) {
-    return { error: 'No RDAP endpoint for .' + tld, tld: tld };
+    throw new Error('No RDAP endpoint for .' + tld);
   }
 
   const res = await fetch(rdapBase + 'domain/' + domain);
-  if (res.status !== 200) {
-    return { error: 'RDAP returned ' + res.status, tld: tld };
+  if (!res.ok) {
+    throw new Error('RDAP returned ' + res.status);
   }
 
   const json = await res.json();

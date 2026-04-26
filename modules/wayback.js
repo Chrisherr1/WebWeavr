@@ -4,6 +4,9 @@ export default async function wayback(domain) {
   // collapse=urlkey deduplicates URLs that differ only by query string
   const url = 'https://web.archive.org/cdx/search/cdx?url=*.' + domain + '/*&output=json&fl=original,statuscode,timestamp&collapse=urlkey&limit=100';
   const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error('Wayback returned ' + res.status);
+  }
   const json = await res.json();
 
   if (!json.length) {

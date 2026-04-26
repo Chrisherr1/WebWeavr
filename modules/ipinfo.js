@@ -2,20 +2,18 @@
 // First resolves the domain to IPs via Cloudflare DoH, then looks up each IP.
 
 async function resolveIPs(domain) {
-  try {
-    const res = await fetch('https://cloudflare-dns.com/dns-query?name=' + domain + '&type=A', {
-      headers: { Accept: 'application/dns-json' }
-    });
-    const json = await res.json();
-    // type 1 = A record
-    return (json.Answer || []).filter(function (r) {
-      return r.type === 1;
-    }).map(function (r) {
-      return r.data;
-    });
-  } catch (err) {
-    return [];
+  const res = await fetch('https://cloudflare-dns.com/dns-query?name=' + domain + '&type=A', {
+    headers: { Accept: 'application/dns-json' }
+  });
+  if (!res.ok) {
+    throw new Error('Cloudflare DoH returned ' + res.status);
   }
+  const json = await res.json();
+  return (json.Answer || []).filter(function (r) {
+    return r.type === 1;
+  }).map(function (r) {
+    return r.data;
+  });
 }
 
 export default async function ipinfo(domain) {
@@ -27,6 +25,9 @@ export default async function ipinfo(domain) {
   const settled = await Promise.allSettled(
     ips.map(async function (ip) {
       const res = await fetch('https://ipinfo.io/' + ip + '/json');
+      if (!res.ok) {
+        throw new Error('IPInfo returned ' + res.status);
+      }
       const json = await res.json();
       return {
         ip:       ip,
@@ -38,6 +39,10 @@ export default async function ipinfo(domain) {
       };
     })
   );
+
+  if (settled.every(function (r) { return r.status === 'rejected'; })) {
+    throw new Error('All IPInfo lookups failed');
+  }
 
   return {
     ips: ips,

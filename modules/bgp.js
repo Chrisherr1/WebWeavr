@@ -5,6 +5,9 @@ export default async function bgp(domain) {
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WebWeavr/1.0; passive recon tool)' }
   });
+  if (!res.ok) {
+    throw new Error('BGP.he.net returned ' + res.status);
+  }
   const data = await res.text();
   const asnMatches = [...data.matchAll(/AS(\d+)/g)].map(function (m) { return 'AS' + m[1]; });
   const prefixMatches = [...data.matchAll(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2})/g)].map(function (m) { return m[1]; });

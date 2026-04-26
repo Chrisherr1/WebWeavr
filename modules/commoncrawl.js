@@ -3,6 +3,9 @@
 export default async function commoncrawl(domain) {
   const url = 'https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.' + domain + '&output=json&limit=100';
   const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error('CommonCrawl returned ' + res.status);
+  }
   // Response is newline-delimited JSON, not a JSON array
   const text = await res.text();
   const lines = text.trim().split('\n').filter(function (line) {
