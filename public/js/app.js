@@ -227,7 +227,7 @@ function toggleCard(id) {
 function statusText(s) {
   if (s === 'loading') { return 'Running…'; }
   if (s === 'done')    { return 'Done'; }
-  if (s === 'error')   { return 'Error'; }
+  if (s === 'error')   { return 'Provider Down'; }
   return '';
 }
 
