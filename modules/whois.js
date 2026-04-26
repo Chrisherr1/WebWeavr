@@ -1,11 +1,37 @@
+import whoisJson from 'whois-json';
+
 // Fetches WHOIS data via RDAP (the modern, structured replacement for plain WHOIS).
-// Uses the IANA bootstrap registry to find the correct RDAP endpoint for the TLD.
+// Falls back to legacy WHOIS protocol when RDAP returns 404.
+
+function parseList(value) {
+  if (!value) {
+    return [];
+  }
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return String(value).split(/[\n\s]+/).filter(Boolean);
+}
+
+async function legacyWhois(domain, tld) {
+  const data = await whoisJson(domain);
+  return {
+    registrar:   data.registrar || null,
+    registered:  data.creationDate || data.created || null,
+    updated:     data.updatedDate || data.lastUpdated || null,
+    expiry:      data.registryExpiryDate || data.registrarRegistrationExpirationDate || data.expirationDate || null,
+    nameservers: parseList(data.nameServer || data.nameServers).map(function (n) { return n.toLowerCase(); }),
+    status:      parseList(data.domainStatus || data.status),
+    tld:         tld,
+    source:      'WHOIS (legacy fallback)'
+  };
+}
+
 export default async function whois(domain) {
   const tld = domain.split('.').pop().toLowerCase();
   let rdapBase = null;
 
   try {
-    // The IANA bootstrap file maps TLDs to their authoritative RDAP endpoints
     const bootstrap = await fetch('https://data.iana.org/rdap/dns.json');
     const bootstrapJson = await bootstrap.json();
     for (const [tlds, urls] of bootstrapJson.services) {
@@ -15,15 +41,17 @@ export default async function whois(domain) {
       }
     }
   } catch (err) {
-    // Fall back to Verisign's endpoint for .com/.net if bootstrap fetch fails
     rdapBase = 'https://rdap.verisign.com/com/v1/';
   }
 
   if (!rdapBase) {
-    throw new Error('No RDAP endpoint for .' + tld);
+    return await legacyWhois(domain, tld);
   }
 
   const res = await fetch(rdapBase + 'domain/' + domain);
+  if (res.status === 404) {
+    return await legacyWhois(domain, tld);
+  }
   if (!res.ok) {
     throw new Error('RDAP returned ' + res.status);
   }
