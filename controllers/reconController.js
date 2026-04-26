@@ -3,11 +3,6 @@ import { createSender } from '../utils/sse.js';
 import { runScan } from '../services/reconService.js';
 import { logScan } from '../services/scanLogger.js';
 
-
-/*
-  Scans a domain for subdomains and other information.
- */
-
 export async function scan(req, res) {
   const domain = req.query.domain;
 
@@ -22,10 +17,19 @@ export async function scan(req, res) {
 
   const send = createSender(res);
   const ip = req.ip;
+  const controller = new AbortController();
+
+  req.on('close', function () {
+    controller.abort();
+  });
 
   try {
-    await runScan(domain, send);
-    await logScan(ip, domain, 'completed');
+    await runScan(domain, send, controller.signal);
+    if (controller.signal.aborted) {
+      await logScan(ip, domain, 'aborted');
+    } else {
+      await logScan(ip, domain, 'completed');
+    }
   } catch (err) {
     send('error', { error: err.message });
     await logScan(ip, domain, 'errored');

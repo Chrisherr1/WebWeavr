@@ -158,7 +158,11 @@ async function startScan() {
       }
     }
   } catch (err) {
-    progressLabel.textContent = 'Connection error.';
+    if (completed > 0) {
+      progressLabel.textContent = 'Scan ended early — showing partial results (' + completed + ' modules completed).';
+    } else {
+      progressLabel.textContent = 'Connection error.';
+    }
   } finally {
     btn.disabled = false;
   }
