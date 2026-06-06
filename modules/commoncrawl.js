@@ -1,8 +1,19 @@
 // Queries the CommonCrawl index for URLs crawled under the target domain.
 // Also flags URLs that match patterns common to sensitive or interesting endpoints.
 export default async function commoncrawl(domain) {
-  const url = 'https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=*.' + domain + '&output=json&limit=100';
-  const res = await fetch(url);
+  const headers = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' };
+  const collRes = await fetch('https://index.commoncrawl.org/collinfo.json', { headers });
+
+  if (!collRes.ok) throw new Error('CommonCrawl collinfo returned ' + collRes.status);
+  const collections = await collRes.json();
+  const latest = collections[0].id;
+
+  const url = 'https://index.commoncrawl.org/' + latest + '-index?url=*.' + domain + '&output=json&limit=100';
+  const res = await fetch(url, { headers });
+  
+  if (res.status === 404) {
+    return { urls: [], count: 0, interesting: [] };
+  }
   if (!res.ok) {
     throw new Error('CommonCrawl returned ' + res.status);
   }

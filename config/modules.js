@@ -3,12 +3,11 @@ import dns from '../modules/dns.js';
 import bgp from '../modules/bgp.js'; 
 import crtsh from '../modules/crtsh.js';
 import certspotter from '../modules/certspotter.js';
-import anubis from '../modules/anubis.js';
 import urlscan from '../modules/urlscan.js';
 import wayback from '../modules/wayback.js';
 import commoncrawl from '../modules/commoncrawl.js';
-import internetdb from '../modules/internetdb.js';
 import ipinfo from '../modules/ipinfo.js';
+import internetdb from '../modules/internetdb.js';
 
 export const GROUPS = [
   {
@@ -34,7 +33,6 @@ export const GROUPS = [
     modules: [
       { id: 'crtsh',       label: 'crt.sh',     fn: crtsh },
       { id: 'certspotter', label: 'CertSpotter', fn: certspotter },
-      { id: 'anubis',      label: 'Anubis',      fn: anubis },
     ]
   },
   {

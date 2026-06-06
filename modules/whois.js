@@ -15,6 +15,11 @@ function parseList(value) {
 
 async function legacyWhois(domain, tld) {
   const data = await whoisJson(domain);
+  const contact = {
+    name:  data.registrantName  || data.registrantOrganization || null,
+    email: data.registrantEmail || null,
+    org:   data.registrantOrganization || null,
+  };
   return {
     registrar:   data.registrar || null,
     registered:  data.creationDate || data.created || null,
@@ -22,6 +27,8 @@ async function legacyWhois(domain, tld) {
     expiry:      data.registryExpiryDate || data.registrarRegistrationExpirationDate || data.expirationDate || null,
     nameservers: parseList(data.nameServer || data.nameServers).map(function (n) { return n.toLowerCase(); }),
     status:      parseList(data.domainStatus || data.status),
+    contact:     (contact.name || contact.email || contact.org) ? contact : null,
+    dnssec:      null,
     tld:         tld,
     source:      'WHOIS (legacy fallback)'
   };
@@ -70,22 +77,64 @@ export default async function whois(domain) {
   });
 
   let registrar = null;
+  let registrarContact = null;
   if (registrarEntity && registrarEntity.vcardArray && registrarEntity.vcardArray[1]) {
-    const fnEntry = registrarEntity.vcardArray[1].find(function (v) { return v[0] === 'fn'; });
-    registrar = fnEntry ? fnEntry[3] : null;
+    const vcard = registrarEntity.vcardArray[1];
+    const fn    = vcard.find(function (v) { return v[0] === 'fn'; });
+    registrar   = fn ? fn[3] : null;
+
+    const abuseEntity = (registrarEntity.entities || []).find(function (e) {
+      return e.roles && e.roles.includes('abuse');
+    });
+    if (abuseEntity && abuseEntity.vcardArray && abuseEntity.vcardArray[1]) {
+      const av    = abuseEntity.vcardArray[1];
+      const email = av.find(function (v) { return v[0] === 'email'; });
+      const tel   = av.find(function (v) { return v[0] === 'tel'; });
+      registrarContact = {
+        email: email ? email[3] : null,
+        phone: tel   ? tel[3]   : null,
+      };
+    }
   }
 
   const nameservers = (json.nameservers || []).map(function (ns) {
     return ns.ldhName ? ns.ldhName.toLowerCase() : null;
   });
 
+  const registrantEntity = entities.find(function (e) {
+    return e.roles && e.roles.includes('registrant');
+  });
+  let contact = null;
+  if (registrantEntity && registrantEntity.vcardArray && registrantEntity.vcardArray[1]) {
+    const vcard = registrantEntity.vcardArray[1];
+    const fn    = vcard.find(function (v) { return v[0] === 'fn'; });
+    const email = vcard.find(function (v) { return v[0] === 'email'; });
+    const org   = vcard.find(function (v) { return v[0] === 'org'; });
+    if (fn || email || org) {
+      contact = {
+        name:  fn    ? fn[3]    : null,
+        email: email ? email[3] : null,
+        org:   org   ? org[3]   : null,
+      };
+    }
+  }
+
+  const secureDns = json.secureDNS || null;
+  const dnssec = secureDns ? {
+    zoneSigned:       secureDns.zoneSigned       || false,
+    delegationSigned: secureDns.delegationSigned || false,
+  } : null;
+
   return {
-    registrar: registrar,
-    registered: getEvent('registration'),
-    updated: getEvent('last changed'),
-    expiry: getEvent('expiration'),
-    nameservers: nameservers,
-    status: Array.isArray(json.status) ? json.status : [],
-    tld: tld
+    registrar:        registrar,
+    registrarContact: registrarContact,
+    registered:       getEvent('registration'),
+    updated:          getEvent('last changed'),
+    expiry:           getEvent('expiration'),
+    nameservers:      nameservers,
+    status:           Array.isArray(json.status) ? json.status : [],
+    contact:          contact,
+    dnssec:           dnssec,
+    tld:              tld
   };
 }

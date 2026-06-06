@@ -11,6 +11,77 @@ const results = document.getElementById('results');
 
 let totalModules = 0;
 let completed = 0;
+let scanData = {};
+let scanDomain = '';
+
+const exportBar = document.getElementById('export-bar');
+const exportBtn = document.getElementById('export-btn');
+
+exportBtn.addEventListener('click', function () {
+  const d = scanData;
+
+  const subdomains = [...new Set([
+    ...((d.crtsh       && d.crtsh.subdomains)       || []),
+    ...((d.certspotter && d.certspotter.subdomains)  || []),
+    ...((d.urlscan     && d.urlscan.subdomains)      || []),
+  ])].sort();
+
+  const interestingUrls = [...new Set([
+    ...((d.wayback     && d.wayback.interesting)     || []).map(function (u) { return u.url || u; }),
+    ...((d.commoncrawl && d.commoncrawl.interesting) || []).map(function (u) { return u.url || u; }),
+  ])];
+
+  const ips = [];
+  const ipMap = {};
+  ((d.ipinfo && d.ipinfo.results) || []).forEach(function (r) {
+    ipMap[r.ip] = { ip: r.ip, org: r.org || null, location: r.city && r.country ? r.city + ', ' + r.country : (r.country || null), ports: [], vulns: [], hostnames: [] };
+    ips.push(ipMap[r.ip]);
+  });
+  ((d.internetdb && d.internetdb.results) || []).forEach(function (r) {
+    if (ipMap[r.ip]) {
+      ipMap[r.ip].ports     = r.ports     || [];
+      ipMap[r.ip].vulns     = r.vulns     || [];
+      ipMap[r.ip].hostnames = r.hostnames || [];
+    }
+  });
+
+  const output = {
+    domain:     scanDomain,
+    scanned_at: new Date().toISOString(),
+    registration: d.whois ? {
+      registrar:   d.whois.registrar   || null,
+      registered:  d.whois.registered  || null,
+      expires:     d.whois.expiry       || null,
+      updated:     d.whois.updated     || null,
+      nameservers: d.whois.nameservers || [],
+      status:      d.whois.status      || [],
+      dnssec:      d.whois.dnssec      || null,
+    } : null,
+    dns: d.dns ? {
+      ips:         (d.dns.A    || []).map(function (r) { return r.value; }),
+      ipv6:        (d.dns.AAAA || []).map(function (r) { return r.value; }),
+      mail:        (d.dns.MX   || []).map(function (r) { return r.value; }),
+      nameservers: (d.dns.NS   || []).map(function (r) { return r.value; }),
+      txt:         (d.dns.TXT  || []).map(function (r) { return r.value; }),
+    } : null,
+    network: d.bgp ? {
+      asns:     d.bgp.asns     || [],
+      prefixes: d.bgp.prefixes || [],
+    } : null,
+    ips:              ips,
+    subdomains:       subdomains,
+    technologies:     (d.urlscan && d.urlscan.technologies) || [],
+    interesting_urls: interestingUrls,
+  };
+
+  const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = scanDomain + '-recon.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
 
 const MODULE_META = {
   whois:       { label: 'WHOIS / RDAP',  source: 'RDAP / IANA',           desc: 'Registrar, registration date, expiry, and nameservers — who registered it and when' },
@@ -20,7 +91,6 @@ const MODULE_META = {
   internetdb:  { label: 'InternetDB',    source: 'internetdb.shodan.io',  desc: 'Open ports, services, and CVEs for resolved IPs — pre-scanned by Shodan, no active probing' },
   crtsh:       { label: 'crt.sh',        source: 'crt.sh',                desc: 'Every subdomain that has ever appeared in a public TLS certificate — nothing gets deleted' },
   certspotter: { label: 'CertSpotter',   source: 'certspotter.com',       desc: 'Independent CT index — catches certs that crt.sh sometimes misses' },
-  anubis:      { label: 'Anubis',        source: 'jonlu.ca',              desc: 'Lightweight CT aggregator — returns results when other sources are down' },
   wayback:     { label: 'Wayback',       source: 'web.archive.org',       desc: 'Archived URLs — old endpoints, admin paths, APIs, and files that may no longer be visible' },
   commoncrawl: { label: 'CommonCrawl',   source: 'index.commoncrawl.org', desc: 'Web crawl index — publicly linked pages and paths discovered by crawlers' },
   urlscan:     { label: 'URLScan',       source: 'urlscan.io',            desc: 'Browser-based scans — detected technologies, CDN, server headers, and what the site exposed' },
@@ -49,6 +119,9 @@ async function startScan() {
   results.innerHTML = '';
   completed = 0;
   totalModules = 0;
+  scanData = {};
+  scanDomain = domain;
+  exportBar.classList.add('hidden');
   progressFill.style.width = '0%';
   progress.classList.remove('hidden');
   btn.disabled = true;
@@ -86,6 +159,7 @@ async function startScan() {
       completed++;
       updateProgress();
       updateCard(payload.id, 'done', payload.data);
+      scanData[payload.id] = payload.data;
     },
     module_error: function (payload) {
       completed++;
@@ -103,6 +177,7 @@ async function startScan() {
       if (el) {
         el.innerHTML = renderPipeline(payload.subdomains, payload.live);
       }
+      exportBar.classList.remove('hidden');
     },
     complete: function () {
       progressFill.style.width = '100%';
@@ -282,12 +357,11 @@ function renderBody(id, data) {
   if (id === 'bgp')         { return renderBgp(data); }
   if (id === 'crtsh')       { return renderSubdomains(data, 'crt.sh',      'permanent record — staging, dev, and internal names often slip in'); }
   if (id === 'certspotter') { return renderSubdomains(data, 'CertSpotter', 'independent index — catches certs crt.sh sometimes misses'); }
-  if (id === 'anubis')      { return renderSubdomains(data, 'Anubis',      'aggregated CT data — useful redundancy source'); }
   if (id === 'urlscan')     { return renderUrlscan(data); }
   if (id === 'wayback')     { return renderUrls(data, 'Wayback Machine'); }
   if (id === 'commoncrawl') { return renderUrls(data, 'CommonCrawl'); }
-  if (id === 'internetdb')  { return renderInternetdb(data); }
   if (id === 'ipinfo')      { return renderIpinfo(data); }
+  if (id === 'internetdb')  { return renderInternetdb(data); }
   return '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
 }
 
@@ -295,15 +369,41 @@ function renderWhois(d) {
   const registered = d.registered ? new Date(d.registered).toLocaleDateString() : null;
   const updated    = d.updated    ? new Date(d.updated).toLocaleDateString()    : null;
   const expiry     = d.expiry     ? new Date(d.expiry).toLocaleDateString()     : null;
+
+  const dnssecHtml = d.dnssec
+    ? row('DNSSEC', d.dnssec.delegationSigned
+        ? 'Fully signed'
+        : d.dnssec.zoneSigned
+          ? 'Zone signed, delegation missing — chain of trust is broken'
+          : 'Not signed',
+        'unsigned domains are vulnerable to DNS cache poisoning')
+    : '';
+
+  const registrarContactHtml = d.registrarContact
+    ? section('Registrar Contact')
+      + (d.registrarContact.email ? row('Abuse Email', d.registrarContact.email) : '')
+      + (d.registrarContact.phone ? row('Abuse Phone', d.registrarContact.phone) : '')
+    : '';
+
+  const contactHtml = d.contact
+    ? section('Registrant Contact')
+      + (d.contact.name  ? row('Name',  d.contact.name)  : '')
+      + (d.contact.org   ? row('Org',   d.contact.org)   : '')
+      + (d.contact.email ? row('Email', d.contact.email) : '')
+    : '';
+
   return ''
     + row('Registrar',  d.registrar, 'privacy proxy = harder to attribute')
     + row('Registered', registered,  'newly registered domains are higher risk')
     + row('Updated',    updated,     'recent changes may signal infra shift')
     + row('Expires',    expiry,      'expiring soon = potential takeover risk')
+    + dnssecHtml
     + section('Nameservers', 'reveals DNS provider — Cloudflare, Route53, self-hosted')
     + tags(d.nameservers)
     + section('Status')
-    + tags(d.status);
+    + tags(d.status)
+    + registrarContactHtml
+    + contactHtml;
 }
 
 function renderDns(d) {

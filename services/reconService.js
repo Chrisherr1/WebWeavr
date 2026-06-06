@@ -3,7 +3,7 @@ import { aggregate } from '../pipeline/aggregate.js';
 import { resolve } from '../pipeline/resolve.js';
 import { enrich } from '../pipeline/enrich.js';
 
-const MODULE_TIMEOUT_MS = 15000;
+const MODULE_TIMEOUT_MS = 30000;
 
 function withTimeout(promise, ms) {
   return Promise.race([

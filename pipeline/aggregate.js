@@ -1,10 +1,11 @@
 // Collects and deduplicates subdomains from all module results into a single sorted list.
 // Each source type returns data in a different shape, so each is handled separately.
+
 export function aggregate(results, domain) {
   const subdomains = new Set();
 
   // These sources return a flat subdomains array directly
-  const directSources = ['crtsh', 'certspotter', 'anubis', 'urlscan'];
+  const directSources = ['crtsh', 'certspotter', 'urlscan'];
 
   for (const id of directSources) {
     const sourceSubdomains = (results[id] && results[id].subdomains) ? results[id].subdomains : [];
@@ -27,6 +28,7 @@ export function aggregate(results, domain) {
       } catch (err) {}
     });
   }
+
 
   // InternetDB returns hostnames per IP — filter to only those matching the target domain
   const internetdbResults = (results.internetdb && results.internetdb.results) ? results.internetdb.results : [];

@@ -2,7 +2,7 @@
 // Extracts detected technologies, subdomains seen in scan results, and recent scan metadata.
 export default async function urlscan(domain) {
   const url = 'https://urlscan.io/api/v1/search/?q=domain:' + domain + '&size=10';
-  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  const res = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36' } });
   if (!res.ok) {
     throw new Error('URLScan returned ' + res.status);
   }
