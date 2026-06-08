@@ -1,0 +1,33 @@
+name: Deploy Frontend
+
+on:
+  workflow_dispatch: # allows manual trigger from GitHub Actions tab
+  push:
+    branches:
+      - main
+    # Only run this workflow when frontend files change
+    paths:
+      - 'public/**'
+
+jobs:
+  deploy-frontend:
+    # GitHub runs this on their Ubuntu machine
+    runs-on: ubuntu-latest
+
+    steps:
+      # Pull your repo code onto the GitHub Actions machine
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Rsync only the public/ folder to your VPS
+      # Nginx will serve these files directly
+      - name: Deploy static files to VPS
+        uses: burnett01/rsync-deployments@6.0.0
+        with:
+          switches: -avz --delete        # -a preserve permissions, -v verbose, -z compress, --delete remove old files
+          path: public/
+          remote_path: /var/www/webweavr/
+          remote_host: ${{ secrets.VPS_IP }}
+          remote_user: ${{ secrets.VPS_USER }}
+          remote_key: ${{ secrets.SSH_KEY_PRIVATE_TO_ACCESS_VPS }}
+          remote_port: ${{ secrets.SSH_PORT }}

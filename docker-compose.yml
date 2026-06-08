@@ -1,5 +1,6 @@
 services:
   db:
+    container_name: webweavr-db
     image: mysql:8
     restart: unless-stopped
     environment:
@@ -24,6 +25,7 @@ services:
           cpus: "1"
 
   api:
+    container_name: webweavr-api
     build: .
     restart: unless-stopped
     ports:

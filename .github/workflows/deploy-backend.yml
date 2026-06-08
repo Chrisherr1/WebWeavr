@@ -1,0 +1,29 @@
+name: Deploy Backend
+
+on:
+  workflow_dispatch: # allows manual trigger from GitHub Actions tab
+  push:
+    branches:
+      - main
+    # Skip this workflow if only frontend files changed
+    paths-ignore:
+      - 'public/**'
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      # SSH into the VPS, pull latest code, rebuild and restart the container
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_KEY_PRIVATE_TO_ACCESS_VPS }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /opt/webweavr/backend
+            git pull origin main
+            docker compose up -d --build
+            docker image prune -f

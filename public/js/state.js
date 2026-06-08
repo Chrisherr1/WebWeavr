@@ -1,8 +1,5 @@
-// API base URL — empty in dev (same origin), full URL in production
+// API base URL — same origin in both dev and production
 export let API_BASE = '';
-if (location.hostname === 'webweavr.christianherrera.dev') {
-  API_BASE = 'https://api.webweavr.christianherrera.dev';
-}
 
 // Display name, data source, and tooltip description for each scan module
 export const MODULE_META = {
