@@ -1,6 +1,10 @@
 // Collects and deduplicates subdomains from all module results into a single sorted list.
 // Each source type returns data in a different shape, so each is handled separately.
 
+function belongsToDomain(hostname, domain) {
+  return hostname === domain || hostname.endsWith('.' + domain);
+}
+
 export function aggregate(results, domain) {
   const subdomains = new Set();
 
@@ -8,46 +12,69 @@ export function aggregate(results, domain) {
   const directSources = ['crtsh', 'certspotter', 'urlscan'];
 
   for (const id of directSources) {
-    const sourceSubdomains = (results[id] && results[id].subdomains) ? results[id].subdomains : [];
-    sourceSubdomains.forEach(function (s) {
-      subdomains.add(s);
-    });
+    const source = results[id];
+    let list = [];
+    if (source && source.subdomains) {
+      list = source.subdomains;
+    }
+
+    for (const subdomain of list) {
+      subdomains.add(subdomain);
+    }
   }
 
-  // These sources return URL strings — extract the hostname and validate it belongs to the target domain
+  // These sources return URL strings — extract the hostname and check it belongs to the target domain
   const urlSources = ['wayback', 'commoncrawl'];
-  
+
   for (const id of urlSources) {
-    const sourceUrls = (results[id] && results[id].urls) ? results[id].urls : [];
-    sourceUrls.forEach(function (u) {
+    const source = results[id];
+    let list = [];
+    if (source && source.urls) {
+      list = source.urls;
+    }
+
+    for (const entry of list) {
       try {
-        const hostname = new URL(u.url || u).hostname.toLowerCase();
-        if (hostname.endsWith('.' + domain) || hostname === domain) {
+        const rawUrl = entry.url || entry;
+        const hostname = new URL(rawUrl).hostname.toLowerCase();
+
+        if (belongsToDomain(hostname, domain)) {
           subdomains.add(hostname);
         }
-      } catch (err) {}
-    });
+      } catch (err) {
+        // Skip malformed URLs
+      }
+    }
   }
 
+  // InternetDB returns hostnames per IP — keep only those matching the target domain
+  const internetdbSource = results.internetdb;
+  let internetdbResults = [];
+  if (internetdbSource && internetdbSource.results) {
+    internetdbResults = internetdbSource.results;
+  }
 
-  // InternetDB returns hostnames per IP — filter to only those matching the target domain
-  const internetdbResults = (results.internetdb && results.internetdb.results) ? results.internetdb.results : [];
-  internetdbResults.forEach(function (r) {
-    const hostnames = r.hostnames || [];
-    hostnames.forEach(function (h) {
-      if (h.endsWith('.' + domain) || h === domain) {
-        subdomains.add(h.toLowerCase());
+  for (const result of internetdbResults) {
+    const hostnames = result.hostnames || [];
+    for (const hostname of hostnames) {
+      if (belongsToDomain(hostname, domain)) {
+        subdomains.add(hostname.toLowerCase());
       }
-    });
-  });
+    }
+  }
 
   // IPInfo returns a hostname per IP — same domain check applies
-  const ipinfoResults = (results.ipinfo && results.ipinfo.results) ? results.ipinfo.results : [];
-  ipinfoResults.forEach(function (r) {
-    if (r.hostname && (r.hostname.endsWith('.' + domain) || r.hostname === domain)) {
-      subdomains.add(r.hostname.toLowerCase());
+  const ipinfoSource = results.ipinfo;
+  let ipinfoResults = [];
+  if (ipinfoSource && ipinfoSource.results) {
+    ipinfoResults = ipinfoSource.results;
+  }
+
+  for (const result of ipinfoResults) {
+    if (result.hostname && belongsToDomain(result.hostname, domain)) {
+      subdomains.add(result.hostname.toLowerCase());
     }
-  });
+  }
 
   return [...subdomains].sort();
 }

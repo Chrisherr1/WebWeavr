@@ -9,11 +9,13 @@ async function resolveIPs(domain) {
     throw new Error('Cloudflare DoH returned ' + res.status);
   }
   const json = await res.json();
-  return (json.Answer || []).filter(function (r) {
-    return r.type === 1;
-  }).map(function (r) {
-    return r.data;
-  });
+  const ips = [];
+  for (const answer of (json.Answer || [])) {
+    if (answer.type === 1) {
+      ips.push(answer.data);
+    }
+  }
+  return ips;
 }
 
 export default async function internetdb(domain) {
@@ -22,38 +24,48 @@ export default async function internetdb(domain) {
     return { ips: [], results: [] };
   }
 
-  const settled = await Promise.allSettled(
-    ips.map(async function (ip) {
-      const res = await fetch('https://internetdb.shodan.io/' + ip);
+  const promises = [];
+  for (const ip of ips) {
+    promises.push(async function (targetIp) {
+      const res = await fetch('https://internetdb.shodan.io/' + targetIp);
       // 404 means no data on that IP, which is a valid response
       if (!res.ok && res.status !== 404) {
         throw new Error('InternetDB returned ' + res.status);
       }
       if (res.status === 404) {
-        return { ip: ip, ports: [], vulns: [], cpes: [], hostnames: [], tags: [] };
+        return { ip: targetIp, ports: [], vulns: [], cpes: [], hostnames: [], tags: [] };
       }
       const json = await res.json();
       return {
-        ip:        ip,
+        ip:        targetIp,
         ports:     json.ports     || [],
         vulns:     json.vulns     || [],
         cpes:      json.cpes      || [],
         hostnames: json.hostnames || [],
         tags:      json.tags      || []
       };
-    })
-  );
+    }(ip));
+  }
+  const settled = await Promise.allSettled(promises);
 
-  if (settled.every(function (r) { return r.status === 'rejected'; })) {
+  let allFailed = true;
+  for (const settledResult of settled) {
+    if (settledResult.status !== 'rejected') {
+      allFailed = false;
+      break;
+    }
+  }
+
+  if (allFailed) {
     throw new Error('All InternetDB lookups failed');
   }
 
-  return {
-    ips: ips,
-    results: settled.filter(function (r) {
-      return r.status === 'fulfilled';
-    }).map(function (r) {
-      return r.value;
-    })
-  };
+  const results = [];
+  for (const settledResult of settled) {
+    if (settledResult.status === 'fulfilled') {
+      results.push(settledResult.value);
+    }
+  }
+
+  return { ips: ips, results: results };
 }

@@ -3,6 +3,11 @@ export default function errorHandler(error, request, response, next) {
     return response.end();
   }
   const status = error.status || 500;
-  const message = status === 500 ? 'Internal Server Error' : error.message;
+  let message;
+  if (status === 500) {
+    message = 'Internal Server Error';
+  } else {
+    message = error.message;
+  }
   response.status(status).json({ error: message });
 }

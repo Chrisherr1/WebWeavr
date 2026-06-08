@@ -61,56 +61,22 @@ WebWeavr/
 ├── utils/
 │   ├── domain.js           # Domain validation
 │   └── sse.js              # SSE helper
-├── public/                 # Frontend (HTML, CSS, JS)
+├── public/
+│   ├── index.html          # Single page — markup only, no inline logic
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       ├── app.js          # Entry point — event handlers and scan flow
+│       ├── state.js        # Shared config and scan state
+│       ├── helpers.js      # Small reusable functions for building HTML
+│       ├── render.js       # Turns module results into what you see on screen
+│       └── export.js       # Handles the JSON download
 ├── Dockerfile              # API container build
 ├── docker-compose.yml      # API + MySQL stack
 ├── app.js                  # Express app setup
 └── index.js                # Server entry point
 ```
 
-## Getting Started
-
-### Option A: Docker (recommended)
-
-```bash
-docker compose up -d
-```
-
-This brings up both the API and MySQL with the schema pre-loaded. The app will be available on `http://localhost:3001`.
-
-### Option B: Local Node + MySQL
-
-#### 1. Install dependencies
-```bash
-npm install
-```
-
-#### 2. Configure environment variables
-
-Create a `.env` file in the project root:
-```
-DB_HOST=localhost
-DB_USER=webweavr
-DB_PASSWORD=yourpassword
-DB_ROOT_PASSWORD=yourrootpassword
-DB_NAME=webweavr_recon
-CORS_ORIGIN=https://yourdomain.com
-PORT=3000
-```
-
-#### 3. Set up the database
-```bash
-mysql -u root -p < schema/schema.sql
-```
-
-#### 4. Start the server
-```bash
-# Development
-npm run dev
-
-# Production
-npm start
-```
 
 ## API
 
@@ -129,6 +95,65 @@ Streams scan progress as Server-Sent Events.
 | `pipeline_start` | Post-scan pipeline is running |
 | `pipeline_done` | Final enriched results |
 | `complete` | Scan finished |
+
+## Frontend Architecture
+
+```
+state.js
+  ├── API_BASE         (which server to talk to)
+  ├── MODULE_META      (display name, source, tooltip for each module)
+  ├── CDN_ORGS         (list of known CDN org names)
+  └── scanData, scanDomain, totalModules, completed  (live scan state)
+
+helpers.js  ← state.js
+  ├── isCDN()          (checks if an IP org is a known CDN)
+  ├── row()            (renders a label/value row)
+  ├── section()        (renders a section heading)
+  ├── tags()           (renders a list of chips)
+  └── urlList()        (renders a list of URLs)
+
+render.js  ← helpers.js
+  ├── renderWhois()    (RDAP registration data)
+  ├── renderDns()      (DNS records by type)
+  ├── renderBgp()      (ASNs and IP prefixes)
+  ├── renderSubdomains()
+  ├── renderUrlscan()
+  ├── renderUrls()     (Wayback / CommonCrawl)
+  ├── renderIpinfo()
+  ├── renderInternetdb()
+  └── renderPipeline() (Surface Summary block)
+
+export.js  ← state.js
+  ├── buildExportPayload()  (merges all scan data into one clean object)
+  └── downloadJson()        (triggers the file download)
+
+app.js  ← all of the above
+  ├── DOM setup and event listeners
+  ├── startScan()      (kicks off the request and SSE stream)
+  ├── appendCard()     (creates a module card in loading state)
+  ├── updateCard()     (fills the card when a module finishes)
+  └── updateProgress() (updates the progress bar)
+```
+
+## How a Scan Works
+
+```
+User clicks Scan
+    ↓
+app.js sends request to backend
+    ↓
+Backend runs all recon modules in parallel
+    ↓
+Results stream back one by one as each module finishes
+    ↓
+app.js receives each result and hands it to render.js
+    ↓
+render.js draws the result card on screen
+    ↓
+Scan finishes → export button appears
+    ↓
+User clicks Export → export.js packages everything → JSON download
+```
 
 ## Data Flow
 

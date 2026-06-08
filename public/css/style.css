@@ -142,6 +142,8 @@ header .tagline {
   margin-bottom: 24px;
 }
 
+#export-bar.hidden { display: none; }
+
 #export-btn {
   background: transparent;
   color: var(--accent);

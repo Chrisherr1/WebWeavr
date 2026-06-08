@@ -9,8 +9,15 @@ export default async function bgp(domain) {
     throw new Error('BGP.he.net returned ' + res.status);
   }
   const data = await res.text();
-  const asnMatches = [...data.matchAll(/AS(\d+)/g)].map(function (m) { return 'AS' + m[1]; });
-  const prefixMatches = [...data.matchAll(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2})/g)].map(function (m) { return m[1]; });
+  const asnMatches = [];
+  for (const match of data.matchAll(/AS(\d+)/g)) {
+    asnMatches.push('AS' + match[1]);
+  }
+
+  const prefixMatches = [];
+  for (const match of data.matchAll(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2})/g)) {
+    prefixMatches.push(match[1]);
+  }
   // Cap results to avoid noise from unrelated matches on busy pages
   const asns = [...new Set(asnMatches)].slice(0, 10);
   const prefixes = [...new Set(prefixMatches)].slice(0, 20);

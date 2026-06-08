@@ -18,9 +18,10 @@ function withTimeout(promise, ms) {
 
 // send() is an SSE helper — each call pushes a named event to the client
 export async function runScan(domain, send, signal) {
-  const groups = GROUPS.map(function (g) {
-    return { id: g.id, label: g.label, total: g.modules.length };
-  });
+  const groups = [];
+  for (const group of GROUPS) {
+    groups.push({ id: group.id, label: group.label, total: group.modules.length });
+  }
 
   send('start', { domain: domain, total: ALL_MODULES.length, groups: groups });
 

@@ -4,13 +4,19 @@
 async function query(domain, type) {
   const url = 'https://cloudflare-dns.com/dns-query?name=' + domain + '&type=' + type;
   const res = await fetch(url, { headers: { Accept: 'application/dns-json' } });
+
   if (!res.ok) {
     throw new Error('Cloudflare DoH returned ' + res.status);
   }
+
   const json = await res.json();
-  return (json.Answer || []).map(function (r) {
-    return { type: r.type, value: r.data, ttl: r.TTL };
-  });
+  const answers = json.Answer || [];
+
+  const records = [];
+  for (const answer of answers) {
+    records.push({ type: answer.type, value: answer.data, ttl: answer.TTL });
+  }
+  return records;
 }
 
 export default async function dns(domain) {
@@ -22,11 +28,29 @@ export default async function dns(domain) {
     query(domain, 'NS'),
     query(domain, 'CNAME'),
   ]);
-  if (settled.every(function (r) { return r.status === 'rejected'; })) {
+
+  let allFailed = true;
+  for (const settledResult of settled) {
+    if (settledResult.status !== 'rejected') {
+      allFailed = false;
+      break;
+    }
+  }
+
+  if (allFailed) {
     throw new Error('All DNS queries failed');
   }
-  const [A, AAAA, MX, TXT, NS, CNAME] = settled.map(function (r) {
-    return r.status === 'fulfilled' ? r.value : [];
-  });
+
+  const values = [];
+  for (const settledResult of settled) {
+    if (settledResult.status === 'fulfilled') {
+      values.push(settledResult.value);
+    } else {
+      values.push([]);
+    }
+  }
+
+  const [A, AAAA, MX, TXT, NS, CNAME] = values;
+
   return { A, AAAA, MX, TXT, NS, CNAME };
 }

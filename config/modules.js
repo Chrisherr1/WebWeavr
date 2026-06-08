@@ -46,8 +46,11 @@ export const GROUPS = [
   },
 ];
 
-export const ALL_MODULES = GROUPS.flatMap(function (g) {
-  return g.modules.map(function (m) {
-    return Object.assign({}, m, { group: g.id, groupLabel: g.label });
-  });
-});
+// Flatten all groups into a single list, attaching group id and label to each module entry
+const allModules = [];
+for (const group of GROUPS) {
+  for (const moduleEntry of group.modules) {
+    allModules.push(Object.assign({}, moduleEntry, { group: group.id, groupLabel: group.label }));
+  }
+}
+export const ALL_MODULES = allModules;
