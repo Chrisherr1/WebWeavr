@@ -103,7 +103,7 @@ User clicks Scan
     ↓
 app.js sends request to backend
     ↓
-Backend runs all recon modules in parallel
+Backend runs all recon modules one by one
     ↓
 Results stream back one by one as each module finishes
     ↓
@@ -123,7 +123,7 @@ GET /api/recon?domain=
         ↓
   reconController
         ↓
-  reconService (runs all modules in parallel)
+  reconService (runs all modules one by one)
         ↓
   pipeline: aggregate → resolve → enrich
         ↓
