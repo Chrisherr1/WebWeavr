@@ -17,10 +17,9 @@ A passive reconnaissance tool that scans a domain across multiple OSINT sources 
 
 ## Features
 
-- Runs recon modules in parallel across 4 categories
+- Runs recon modules one at a time across 4 categories
 - Streams live progress updates to the client via SSE
 - Aggregates subdomains, resolves live hosts, and enriches results through a post-scan pipeline
-- Logs all scans to MySQL for audit history (queryable directly via the database)
 
 ## Recon Modules
 
@@ -96,44 +95,6 @@ Streams scan progress as Server-Sent Events.
 | `pipeline_done` | Final enriched results |
 | `complete` | Scan finished |
 
-## Frontend Architecture
-
-```
-state.js
-  ├── API_BASE         (which server to talk to)
-  ├── MODULE_META      (display name, source, tooltip for each module)
-  ├── CDN_ORGS         (list of known CDN org names)
-  └── scanData, scanDomain, totalModules, completed  (live scan state)
-
-helpers.js  ← state.js
-  ├── isCDN()          (checks if an IP org is a known CDN)
-  ├── row()            (renders a label/value row)
-  ├── section()        (renders a section heading)
-  ├── tags()           (renders a list of chips)
-  └── urlList()        (renders a list of URLs)
-
-render.js  ← helpers.js
-  ├── renderWhois()    (RDAP registration data)
-  ├── renderDns()      (DNS records by type)
-  ├── renderBgp()      (ASNs and IP prefixes)
-  ├── renderSubdomains()
-  ├── renderUrlscan()
-  ├── renderUrls()     (Wayback / CommonCrawl)
-  ├── renderIpinfo()
-  ├── renderInternetdb()
-  └── renderPipeline() (Surface Summary block)
-
-export.js  ← state.js
-  ├── buildExportPayload()  (merges all scan data into one clean object)
-  └── downloadJson()        (triggers the file download)
-
-app.js  ← all of the above
-  ├── DOM setup and event listeners
-  ├── startScan()      (kicks off the request and SSE stream)
-  ├── appendCard()     (creates a module card in loading state)
-  ├── updateCard()     (fills the card when a module finishes)
-  └── updateProgress() (updates the progress bar)
-```
 
 ## How a Scan Works
 
